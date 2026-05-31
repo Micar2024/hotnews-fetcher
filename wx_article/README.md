@@ -62,3 +62,11 @@
 - v1.2：卡兹克风格改造，口语化，加私人视角
 - v1.3：排版 HTML 版（section 卡片），公众号后台过滤样式
 - v1.4：转 Mdnice Markdown 版，引用块做卡片，成功发布
+
+## 系列文章：AI Agent 飞书卡片自定义
+
+| 篇目 | 文件 | Agent | 技术栈 | 状态 |
+|---|---|---|---|---|
+| 第 1 篇 | `wx_hermes_card_tutorial.md` | Hermes/火灵儿 | Python + hook | 初稿完成 |
+| 第 2 篇 | 待写 | OpenClaw/宁姚 | Node.js + CardKit | 待定 |
+| 第 3 篇 | 待写 | GenericAgent/云曦 | Python + _TaskCard | 待定 |
