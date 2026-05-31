@@ -12,6 +12,12 @@
 
 微博、抖音、B站、今日头条、百度热点、小红书、知乎热榜
 
+## 安装
+
+```bash
+pip install -r requirements.txt
+```
+
 ## 使用
 
 ```bash
