@@ -4,17 +4,20 @@
 from __future__ import annotations
 
 import argparse
+from functools import lru_cache
 import json
+import logging
 import random
 import re
 from typing import Any, Dict, Iterable, List
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
 
 NewsItem = Dict[str, Any]
+logger = logging.getLogger(__name__)
 
 SUPPORTED_PLATFORMS = (
     "微博",
@@ -90,7 +93,7 @@ def get_tophub_hotnews(platform: str, cnt: int = 10) -> List[NewsItem]:
     soup = BeautifulSoup(response.text, "html.parser")
     card = _find_tophub_card(soup, platform)
     if card is None:
-        return _parse_tophub_rows(soup, cnt)
+        return []
 
     detail_link = card.find("a", href=True)
     if detail_link:
@@ -114,6 +117,7 @@ def get_vvhan_hotnews() -> List[NewsItem]:
     return items
 
 
+@lru_cache(maxsize=1)
 def _get_vvhan_platforms_hotnews() -> Dict[str, List[NewsItem]]:
     """Fetch vvhan hotlist API grouped by supported platform."""
     response = requests.get(
@@ -142,20 +146,21 @@ def get_platform_news(platform: str, cnt: int = 10) -> List[NewsItem]:
         items = get_zhiwei_hotnews(platform)
         if items:
             return items[:limit]
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("zhiweidata fallback failed for platform=%s: %s", platform, exc)
 
     try:
         items = get_tophub_hotnews(platform, limit)
         if items:
             return items[:limit]
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("tophub fallback failed for platform=%s: %s", platform, exc)
 
     try:
         vvhan_items = _get_vvhan_platforms_hotnews().get(platform, [])
         return vvhan_items[:limit]
-    except Exception:
+    except Exception as exc:
+        logger.warning("vvhan fallback failed for platform=%s: %s", platform, exc)
         return []
 
 
@@ -240,8 +245,8 @@ def _normalize_news_item(row: Dict[str, Any], index: int) -> NewsItem:
         ),
         "",
     )
-    url = _first_value(row, ("url", "link", "mobileUrl", "pcUrl", "shareUrl"), "")
-    return {"name": str(name).strip(), "rank": rank, "lastCount": last_count, "url": str(url)}
+    url = _normalize_url(_first_value(row, ("url", "link", "mobileUrl", "pcUrl", "shareUrl"), ""))
+    return {"name": str(name).strip(), "rank": rank, "lastCount": last_count, "url": url}
 
 
 def _first_value(row: Dict[str, Any], keys: Iterable[str], default: Any = "") -> Any:
@@ -257,6 +262,12 @@ def _safe_int(value: Any, default: int) -> int:
         return value
     match = re.search(r"\d+", str(value))
     return int(match.group(0)) if match else default
+
+
+def _normalize_url(value: Any) -> str:
+    url = str(value).strip()
+    scheme = urlparse(url).scheme.lower()
+    return url if scheme in {"http", "https"} else ""
 
 
 def _find_tophub_card(soup: BeautifulSoup, platform: str):
